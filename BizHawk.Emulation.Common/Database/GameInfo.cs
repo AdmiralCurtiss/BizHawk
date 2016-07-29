@@ -20,6 +20,7 @@ namespace BizHawk.Emulation.Common
 		public RomStatus Status = RomStatus.NotInDatabase;
 		public bool NotInDatabase = true;
 		public string FirmwareHash;
+		public string ForcedCore;
 
 		Dictionary<string, string> Options = new Dictionary<string, string>();
 
@@ -60,6 +61,7 @@ namespace BizHawk.Emulation.Common
 			Hash = cgi.Hash;
 			Region = cgi.Region;
 			Status = cgi.Status;
+			ForcedCore = cgi.ForcedCore;
 			NotInDatabase = false;
 			ParseOptionsDictionary(cgi.MetaData);
 		}
