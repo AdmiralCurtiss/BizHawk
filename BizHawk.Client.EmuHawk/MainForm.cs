@@ -1383,12 +1383,7 @@ namespace BizHawk.Client.EmuHawk
 		private static string DisplayNameForSystem(string system)
 		{
 			var str = Global.SystemInfo.DisplayName;
-
-			if (VersionInfo.DeveloperBuild)
-			{
-				str += " (interim)";
-			}
-
+			str += " (" + VersionInfo.CustomBuildString + ")";
 			return str;
 		}
 
@@ -1411,16 +1406,12 @@ namespace BizHawk.Client.EmuHawk
 
 			if (Global.Emulator.IsNull())
 			{
-				str = str + "BizHawk" + (VersionInfo.DeveloperBuild ? " (interim) " : string.Empty);
+				str = str + "BizHawk" + ( " (" + VersionInfo.CustomBuildString + ") " );
 			}
 			else
 			{
 				str = str + Global.SystemInfo.DisplayName;
-
-				if (VersionInfo.DeveloperBuild)
-				{
-					str += " (interim)";
-				}
+				str += " (" + VersionInfo.CustomBuildString + ")";
 
 				if (Global.MovieSession.Movie.IsActive)
 				{
@@ -3643,7 +3634,7 @@ namespace BizHawk.Client.EmuHawk
 				GlobalWin.Tools.Restart();
 				RewireSound();
 				Global.Rewinder.ResetRewindBuffer();
-				Text = "BizHawk" + (VersionInfo.DeveloperBuild ? " (interim) " : string.Empty);
+				Text = "BizHawk" + (" (" + VersionInfo.CustomBuildString + ") ");
 				HandlePlatformMenus();
 				_stateSlots.Clear();
 				UpdateDumpIcon();
