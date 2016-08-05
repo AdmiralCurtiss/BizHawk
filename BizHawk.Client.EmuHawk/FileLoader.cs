@@ -57,9 +57,7 @@ namespace BizHawk.Client.EmuHawk
             }
         }
 
-        readonly string[] knownROMExtensions = { ".M3U", ".ISO", ".CUE", ".CCD", ".XML", ".PSF", ".MINIPSF",
-                                                 ".EXE", ".NES", ".83P", ".SNES", ".GB", ".GBC", ".A78",
-                                                 ".C64", ".GBA", ".PSX" };
+        readonly string[] knownROMExtensions = { ".NES", ".FDS", ".UNF", ".SMS", ".GG", ".SG", ".GB", ".GBC", ".GBA", ".PCE", ".SGX", ".BIN", ".SMD", ".GEN", ".MD", ".SMC", ".SFC", ".A26", ".A78", ".LNX", ".COL", ".ROM", ".M3U", ".CUE", ".CCD", ".SGB", ".Z64", ".V64", ".N64", ".WS", ".WSC", ".XML", ".DSK", ".DO", ".PO", ".PSF", ".MINIPSF", ".NSF" };
         readonly string[] nonArchive = { ".ISO", ".CUE", ".CCD" };
 
         #region Loaders
