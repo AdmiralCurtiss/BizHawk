@@ -728,7 +728,7 @@ namespace BizHawk.Client.Common
 								}
 								break;
 							case "SNES":
-								if ( game.ForcedCore.ToLowerInvariant() == "snes9x" ) {
+								if ( game.ForcedCore != null && game.ForcedCore.ToLowerInvariant() == "snes9x" ) {
 									AsLibretro = true;
 									nextComm.LaunchLibretroCore = @"dll/snes9x_libretro.dll";
 									return LoadRom( path, nextComm, forceAccurateCore, recursiveCount + 1 );
