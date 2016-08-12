@@ -4,7 +4,21 @@ static class VersionInfo
 	public static readonly string RELEASEDATE = "October 25, 2016";
 	public static readonly bool DeveloperBuild = false;
 	public static readonly string HomePage = "http://tasvideos.org/BizHawk.html";
-	public static readonly string CustomBuildString = "ArcadePit " + RELEASEDATE;
+
+	private static string _CustomBuildString = null;
+	public static string CustomBuildString {
+		get {
+			if ( _CustomBuildString == null ) {
+				try {
+					_CustomBuildString = System.IO.File.ReadAllLines( "gamedb/apversion.txt" )[0].Trim();
+				} catch ( System.Exception ) {
+					_CustomBuildString = "ArcadePit " + RELEASEDATE;
+				}
+			}
+
+			return _CustomBuildString;
+		}
+	}
 
 	public static string GetEmuVersion()
 	{
