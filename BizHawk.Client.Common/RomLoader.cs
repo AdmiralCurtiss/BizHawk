@@ -755,7 +755,19 @@ namespace BizHawk.Client.Common
 								}
 								else
 								{
+									// NES handles database entries strangely so work around that so we can still force core...
 									core = CoreInventory.Instance["NES", "QuickNes"];
+
+									nextEmulator = core.Create(nextComm, game, rom.RomData, rom.FileData, Deterministic, GetCoreSettings(core.Type), GetCoreSyncSettings(core.Type));
+									if ( nextEmulator is QuickNES ) {
+										string forceCore = ( nextEmulator as QuickNES ).BootGodForceCore;
+										if ( forceCore != null && forceCore.ToLowerInvariant() == "neshawk" ) {
+											core = CoreInventory.Instance["NES", "NesHawk"];
+											nextEmulator = null;
+										}
+									} else {
+										// didn't load quicknes, not sure what that means but I guess it's fine...?
+									}
 								}
 
 								break;
@@ -813,7 +825,7 @@ namespace BizHawk.Client.Common
 								break;
 						}
 
-						if (core != null)
+						if (core != null && nextEmulator == null)
 						{
 							// use coreinventory
 							nextEmulator = core.Create(nextComm, game, rom.RomData, rom.FileData, Deterministic, GetCoreSettings(core.Type), GetCoreSyncSettings(core.Type));
