@@ -953,6 +953,7 @@ namespace BizHawk.Client.EmuHawk
 			SnesWithSnes9xMenuItem.Checked = Global.Config.SNES_InSnes9x;
 
 			gBAWithMGBAToolStripMenuItem.Checked = Global.Config.GBA_UsemGBA;
+			ForceCoresMenuItem.Checked = Global.Config.CoreForcingViaGameDB;
 
 			SnesWithSnes9xMenuItem.Visible = VersionInfo.DeveloperBuild;
 		}
@@ -1279,6 +1280,12 @@ namespace BizHawk.Client.EmuHawk
 		private void setLibretroCoreToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			RunLibretroCoreChooser();
+		}
+
+		private void ForceCoresMenuItem_Click(object sender, EventArgs e)
+		{
+			Global.Config.CoreForcingViaGameDB ^= true;
+			FlagNeedsReboot();
 		}
 
 		#endregion

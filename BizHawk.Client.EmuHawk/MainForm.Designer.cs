@@ -418,6 +418,8 @@
 			this.ShowMenuContextMenuSeparator = new System.Windows.Forms.ToolStripSeparator();
 			this.ShowMenuContextMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.timerMouseIdle = new System.Windows.Forms.Timer(this.components);
+			this.toolStripSeparator35 = new System.Windows.Forms.ToolStripSeparator();
+			this.ForceCoresMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.MainformMenu.SuspendLayout();
 			this.MainStatusBar.SuspendLayout();
 			this.MainFormContextMenu.SuspendLayout();
@@ -1776,7 +1778,9 @@
 			this.gBAWithMGBAToolStripMenuItem,
 			this.toolStripSeparator8,
 			this.N64VideoPluginSettingsMenuItem,
-			this.setLibretroCoreToolStripMenuItem});
+			this.setLibretroCoreToolStripMenuItem,
+			this.toolStripSeparator35,
+			this.ForceCoresMenuItem});
 			this.CoresSubMenu.Name = "CoresSubMenu";
 			this.CoresSubMenu.Size = new System.Drawing.Size(181, 22);
 			this.CoresSubMenu.Text = "Cores";
@@ -3697,6 +3701,18 @@
 			this.timerMouseIdle.Interval = 2000;
 			this.timerMouseIdle.Tick += new System.EventHandler(this.timerMouseIdle_Tick);
 			// 
+			// toolStripSeparator35
+			// 
+			this.toolStripSeparator35.Name = "toolStripSeparator35";
+			this.toolStripSeparator35.Size = new System.Drawing.Size(207, 6);
+			// 
+			// ForceCoresMenuItem
+			// 
+			this.ForceCoresMenuItem.Name = "ForceCoresMenuItem";
+			this.ForceCoresMenuItem.Size = new System.Drawing.Size(210, 22);
+			this.ForceCoresMenuItem.Text = "Force Cores via GameDB";
+			this.ForceCoresMenuItem.Click += new System.EventHandler(this.ForceCoresMenuItem_Click);
+			// 
 			// MainForm
 			// 
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
@@ -4126,5 +4142,7 @@
 		private System.Windows.Forms.ToolStripMenuItem LoadConfigFromMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem SaveMovieAsMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem SaveMovieAsContextMenuItem;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator35;
+		private System.Windows.Forms.ToolStripMenuItem ForceCoresMenuItem;
 	}
 }
