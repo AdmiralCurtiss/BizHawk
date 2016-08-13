@@ -732,7 +732,7 @@ namespace BizHawk.Client.Common
 								}
 								break;
 							case "SNES":
-								if ( game.ForcedCore != null && game.ForcedCore.ToLowerInvariant() == "snes9x" ) {
+								if ( Global.Config.CoreForcingViaGameDB && game.ForcedCore != null && game.ForcedCore.ToLowerInvariant() == "snes9x" ) {
 									AsLibretro = true;
 									nextComm.LaunchLibretroCore = @"dll/snes9x_libretro.dll";
 									return LoadRom( path, nextComm, forceAccurateCore, recursiveCount + 1 );
@@ -763,14 +763,12 @@ namespace BizHawk.Client.Common
 									core = CoreInventory.Instance["NES", "QuickNes"];
 
 									nextEmulator = core.Create(nextComm, game, rom.RomData, rom.FileData, Deterministic, GetCoreSettings(core.Type), GetCoreSyncSettings(core.Type));
-									if ( nextEmulator is QuickNES ) {
+									if ( Global.Config.CoreForcingViaGameDB && nextEmulator is QuickNES ) {
 										string forceCore = ( nextEmulator as QuickNES ).BootGodForceCore;
 										if ( forceCore != null && forceCore.ToLowerInvariant() == "neshawk" ) {
 											core = CoreInventory.Instance["NES", "NesHawk"];
 											nextEmulator = null;
 										}
-									} else {
-										// didn't load quicknes, not sure what that means but I guess it's fine...?
 									}
 								}
 
