@@ -250,6 +250,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 
 		public RomStatus? BootGodStatus { get; private set; }
 		public string BootGodName { get; private set; }
+		public string BootGodForceCore { get; private set; }
 
 		void ComputeBootGod()
 		{
@@ -301,12 +302,14 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 
 				BootGodStatus = RomStatus.GoodDump;
 				BootGodName = carts[0].name;
+				BootGodForceCore = carts[0].forcedCore;
 			}
 			else
 			{
 				Console.WriteLine("No BootGod entry found.");
 				BootGodStatus = null;
 				BootGodName = null;
+				BootGodForceCore = null;
 			}
 		}
 

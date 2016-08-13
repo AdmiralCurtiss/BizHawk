@@ -451,6 +451,8 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 			public string board_type;
 			public string pcb;
 
+			public string forcedCore;
+
 			public string sha1;
 			public string system;
 			public List<string> chips = new List<string>();
@@ -687,6 +689,7 @@ namespace BizHawk.Emulation.Cores.Nintendo.NES
 								currCart.system = xmlreader.GetAttribute("system");
 								currCart.sha1 = "sha1:" + xmlreader.GetAttribute("sha1");
 								currCart.name = currName;
+								currCart.forcedCore = xmlreader.GetAttribute("forcedCore");
 								state = 2;
 							}
 							if (xmlreader.NodeType == XmlNodeType.EndElement && xmlreader.Name == "game")
