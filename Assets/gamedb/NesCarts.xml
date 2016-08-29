@@ -122,7 +122,7 @@
 		<peripherals>
 			<device type="3dglasses" name="3-D Glasses"/>
 		</peripherals>
-		<cartridge system="NES-NTSC" crc="E6A477B2" sha1="CE70E57475F4058AC5A05DFED92163D42F0B8B96" dump="ok" dumper="polarz" datedumped="2006-11-08">
+		<cartridge system="NES-NTSC" crc="E6A477B2" sha1="CE70E57475F4058AC5A05DFED92163D42F0B8B96" dump="ok" dumper="polarz" datedumped="2006-11-08" forcedCore="NesHawk">
 			<board type="NES-UNROM" pcb="NES-UN-ROM-04" mapper="2">
 				<prg name="NES-WO-0 PRG" size="128k" crc="E6A477B2" sha1="CE70E57475F4058AC5A05DFED92163D42F0B8B96"/>
 				<vram size="8k"/>
@@ -132,7 +132,7 @@
 				<pad h="1" v="0"/>
 			</board>
 		</cartridge>
-		<cartridge system="NES-NTSC" crc="E6A477B2" sha1="CE70E57475F4058AC5A05DFED92163D42F0B8B96" dump="ok" dumper="bootgod" datedumped="2006-01-26">
+		<cartridge system="NES-NTSC" crc="E6A477B2" sha1="CE70E57475F4058AC5A05DFED92163D42F0B8B96" dump="ok" dumper="bootgod" datedumped="2006-01-26" forcedCore="NesHawk">
 			<board type="NES-UNROM" pcb="NES-UN-ROM-06" mapper="2">
 				<prg name="NES-WO-0 PRG" size="128k" crc="E6A477B2" sha1="CE70E57475F4058AC5A05DFED92163D42F0B8B96"/>
 				<vram size="8k"/>
