@@ -33,7 +33,7 @@ rem explicitly list the OK ones here as individual copies. until then....
 copy *.dll dll
 
 rem Now, we're about to zip and then unzip. Why, you ask? Because that's just the way this evolved.
-..\dist\zip.exe -X -r ..\Dist\%NAME% EmuHawk.exe DiscoHawk.exe defctrl.json dll shaders gamedb Tools NES\Palettes Lua Gameboy\Palettes -x *.pdb -x *.lib -x *.pgd -x *.ipdb -x *.iobj -x *.exp -x dll\libsneshawk-64*.exe -x *.ilk -x dll\gpgx.elf -x dll\miniclient.* -x dll\*.xml
+..\dist\zip.exe -X -r ..\Dist\%NAME% EmuHawk.exe DiscoHawk.exe defctrl.json dll shaders gamedb Tools NES\Palettes Lua Gameboy\Palettes -x *.pdb -x *.lib -x *.pgd -x *.ipdb -x *.iobj -x *.exp -x dll\libsneshawk-64*.exe -x *.ilk -x dll\gpgx.elf -x dll\miniclient.* 
 
 cd ..\Dist
 .\unzip.exe %NAME% -d temp
@@ -44,7 +44,7 @@ rmdir /s /q temp\lua
 rmdir /s /q temp\firmware
 
 rmdir /s /q gitsucks
-git --git-dir ../.git archive --format zip --output lua.zip master output/Lua
+git --git-dir ../.git archive --format zip --output lua.zip master Assets/Lua
 git --git-dir ../.git archive --format zip --output firmware.zip master output/Firmware
 rem Getting externaltools example from my repo
 rem I once talked about a dedicated repo for external tools, think about moving the exemple to it it it happend
@@ -54,7 +54,7 @@ rmdir /s /q  HelloWorld_BizHawkTool
 
 unzip lua.zip -d gitsucks
 rem del lua.zip
-move gitsucks\output\Lua temp
+move gitsucks\Assets\Lua temp
 unzip Firmware.zip -d gitsucks
 rem del firmware.zip
 move gitsucks\output\Firmware temp
@@ -62,9 +62,10 @@ move gitsucks\output\Firmware temp
 rmdir /s /q gitsucks
 
 rem remove UPX from any files we have checked in, because people's lousy security software hates it
-rem upx -d temp\dll\*.dll
-rem upx -d temp\dll\*.exe
-rem upx -d temp\*.exe
+rem: wait, why did I comment this out? did it have to do with CGC not roundtripping de-UPXing? then we should just not UPX it in the first place (but it's big)
+upx -d temp\dll\*.dll
+upx -d temp\dll\*.exe
+upx -d temp\*.exe
 
 cd temp
 
@@ -72,6 +73,7 @@ rem Patch up working dir with a few other things we want
 mkdir ExternalTools
 copy ..\HelloWorld_BizHawkTool.dll ExternalTools
 copy ..\HelloWorld_BizHawkTool.zip ExternalTools
+mkdir Firmware
 
 rem Build the final zip
 ..\zip.exe -X -9 -r ..\%NAME% . -i \*

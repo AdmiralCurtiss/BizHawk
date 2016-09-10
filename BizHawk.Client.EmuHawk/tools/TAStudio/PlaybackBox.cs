@@ -17,7 +17,7 @@ namespace BizHawk.Client.EmuHawk
 
 		public TAStudio Tastudio { get; set; }
 
-		[Browsable(false)]
+		[Browsable(true)]
 		[DesignerSerializationVisibilityAttribute(DesignerSerializationVisibility.Hidden)]
 		public bool TurboSeek
 		{
@@ -28,11 +28,11 @@ namespace BizHawk.Client.EmuHawk
 
 			set
 			{
-				TurboSeekCheckbox.Checked = Global.Config.TurboSeek = value;
+				TurboSeekCheckbox.Checked = value;
 			}
 		}
 
-		[Browsable(false)]
+		[Browsable(true)]
 		[DesignerSerializationVisibilityAttribute(DesignerSerializationVisibility.Hidden)]
 		public bool AutoRestore
 		{
@@ -43,11 +43,11 @@ namespace BizHawk.Client.EmuHawk
 
 			set
 			{
-				AutoRestoreCheckbox.Checked = Tastudio.Settings.AutoRestoreLastPosition = value;
+				AutoRestoreCheckbox.Checked = value;
 			}
 		}
 
-		[Browsable(false)]
+		[Browsable(true)]
 		[DesignerSerializationVisibilityAttribute(DesignerSerializationVisibility.Hidden)]
 		public bool FollowCursor
 		{
@@ -59,6 +59,30 @@ namespace BizHawk.Client.EmuHawk
 			set
 			{
 				FollowCursorCheckbox.Checked = value;
+			}
+		}
+
+		[Browsable(true)]
+		[DesignerSerializationVisibilityAttribute(DesignerSerializationVisibility.Hidden)]
+		public bool RecordingMode
+		{
+			get
+			{
+				return Global.MovieSession.Movie.IsRecording;
+			}
+
+			set
+			{
+				RecordingModeCheckbox.Checked = value;
+				if (RecordingModeCheckbox.Checked)
+				{
+					Global.MovieSession.Movie.SwitchToRecord();
+				}
+				else
+				{
+					Global.MovieSession.Movie.SwitchToPlay();
+				}
+				GlobalWin.MainForm.SetMainformMovieInfo();
 			}
 		}
 
@@ -80,6 +104,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				AutoRestoreCheckbox.Checked = Tastudio.Settings.AutoRestoreLastPosition;
 				FollowCursorCheckbox.Checked = Tastudio.Settings.FollowCursor;
+				RecordingModeCheckbox.Checked = RecordingMode;
 			}
 
 			_loading = false;
@@ -90,19 +115,9 @@ namespace BizHawk.Client.EmuHawk
 			Tastudio.GoToPreviousMarker();
 		}
 
-		private void RewindButton_Click(object sender, EventArgs e)
-		{
-			Tastudio.GoToPreviousFrame();
-		}
-
 		private void PauseButton_Click(object sender, EventArgs e)
 		{
 			Tastudio.TogglePause();
-		}
-
-		private void FrameAdvanceButton_Click(object sender, EventArgs e)
-		{
-			Tastudio.GoToNextFrame();
 		}
 
 		private void NextMarkerButton_Click(object sender, EventArgs e)
@@ -139,5 +154,42 @@ namespace BizHawk.Client.EmuHawk
 				}
 			}
 		}
+
+		private void RecordingModeCheckbox_MouseClick(object sender, MouseEventArgs e)
+		{
+			RecordingMode ^= true;
+		}
+
+		private void RewindButton_MouseDown(object sender, MouseEventArgs e)
+		{
+			GlobalWin.MainForm.PressRewind = true;
+		}
+
+		private void RewindButton_MouseUp(object sender, MouseEventArgs e)
+		{
+			GlobalWin.MainForm.PressRewind = false;
+		}
+
+		private void RewindButton_MouseLeave(object sender, EventArgs e)
+		{
+			GlobalWin.MainForm.PressRewind = false;
+		}
+
+		private void FrameAdvanceButton_MouseDown(object sender, MouseEventArgs e)
+		{
+			GlobalWin.MainForm.HoldFrameAdvance = true;
+		}
+
+		private void FrameAdvanceButton_MouseLeave(object sender, EventArgs e)
+		{
+			GlobalWin.MainForm.HoldFrameAdvance = false;
+		}
+
+		private void FrameAdvanceButton_MouseUp(object sender, MouseEventArgs e)
+		{
+			GlobalWin.MainForm.HoldFrameAdvance = false;
+		}
+
+
 	}
 }

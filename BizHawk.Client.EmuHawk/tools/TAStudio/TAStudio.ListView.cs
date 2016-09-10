@@ -25,6 +25,14 @@ namespace BizHawk.Client.EmuHawk
 		// SuuperW: For editing analog input
 		private string _floatEditColumn = string.Empty;
 		private int _floatEditRow = -1;
+		private int floatEditRow
+		{
+			set
+			{
+				_floatEditRow = value;
+				TasView.suspendHotkeys = FloatEditingMode;
+			}
+		}
 		private string _floatTypedValue;
 		private int _floatEditYPos = -1;
 		// Right-click dragging
@@ -46,6 +54,7 @@ namespace BizHawk.Client.EmuHawk
 		private int? _autoRestoreFrame; // The frame auto-restore will restore to, if set
 		private bool? _autoRestorePaused = null;
 		private int? _seekStartFrame = null;
+		private bool _wasRecording = false;
 
 		private void JumpToGreenzone()
 		{
@@ -53,41 +62,48 @@ namespace BizHawk.Client.EmuHawk
 			{
 				if (_autoRestorePaused == null)
 				{
-					_autoRestorePaused = GlobalWin.MainForm.EmulatorPaused;
-					if (GlobalWin.MainForm.IsSeeking) // If seeking, do not shorten seek.
-						_autoRestoreFrame = GlobalWin.MainForm.PauseOnFrame;
+					_autoRestorePaused = Mainform.EmulatorPaused;
+					if (Mainform.IsSeeking) // If seeking, do not shorten seek.
+						_autoRestoreFrame = Mainform.PauseOnFrame;
 				}
 
 				GoToLastEmulatedFrameIfNecessary(CurrentTasMovie.LastValidFrame);
-				StartSeeking(_autoRestoreFrame, true);
 			}
 		}
 
-		private void StartSeeking(int? frame, bool pause = false)
+		private void StartSeeking(int? frame)
 		{
 			if (!frame.HasValue)
 				return;
 
 			_seekStartFrame = Emulator.Frame;
-			GlobalWin.MainForm.PauseOnFrame = frame.Value;
-			int? diff = GlobalWin.MainForm.PauseOnFrame - _seekStartFrame;
+			Mainform.PauseOnFrame = frame.Value;
+			int? diff = Mainform.PauseOnFrame - _seekStartFrame;
 
-			if (pause)
-				GlobalWin.MainForm.PauseEmulator();
-			else
-				GlobalWin.MainForm.UnpauseEmulator();
+			Mainform.UnpauseEmulator();
 
-			if (!_seekBackgroundWorker.IsBusy && diff.Value > TasView.SeekingCutoffInterval)
+			if (!_seekBackgroundWorker.IsBusy && diff.Value > TasView.VisibleRows)
 				_seekBackgroundWorker.RunWorkerAsync();
 		}
 
 		public void StopSeeking()
 		{
 			_seekBackgroundWorker.CancelAsync();
+			if (_wasRecording)
+			{
+				TastudioRecordMode();
+				_wasRecording = false;
+			}
+		}
+
+		public bool FloatEditingMode
+		{
+			get { return _floatEditRow != -1; }
 		}
 
 		// public static Color CurrentFrame_FrameCol = Color.FromArgb(0xCFEDFC); Why?
-		public static Color CurrentFrame_InputLog = Color.FromArgb(0xB5E7F7);
+		public static Color CurrentFrame_InputLog = Color.FromArgb(0x00B5E7F7);
+		public static Color SeekFrame_InputLog = Color.FromArgb(0x70B5E7F7);
 
 		public static Color GreenZone_FrameCol = Color.FromArgb(0xDDFFDD);
         public static Color GreenZone_InputLog = Color.FromArgb(0xD2F9D3);
@@ -135,7 +151,7 @@ namespace BizHawk.Client.EmuHawk
 
 			if (columnName == CursorColumnName)
 			{
-				if (index == Emulator.Frame && index == GlobalWin.MainForm.PauseOnFrame)
+				if (index == Emulator.Frame && index == Mainform.PauseOnFrame)
 				{
 					bitmap = TasView.HorizontalOrientation ?
 						ts_v_arrow_green_blue :
@@ -147,7 +163,7 @@ namespace BizHawk.Client.EmuHawk
 						ts_v_arrow_blue :
 						ts_h_arrow_blue;
 				}
-				else if (index == GlobalWin.MainForm.PauseOnFrame)
+				else if (index == LastPositionFrame)
 				{
 					bitmap = TasView.HorizontalOrientation ?
 						ts_v_arrow_green :
@@ -203,11 +219,16 @@ namespace BizHawk.Client.EmuHawk
 			if (player != 0 && player % 2 == 0)
 				color = Color.FromArgb(0x0D000000);
 		}
+
 		private void TasView_QueryRowBkColor(int index, ref Color color)
 		{
 			TasMovieRecord record = CurrentTasMovie[index];
 
-			if (Emulator.Frame == index)
+			if (Mainform.IsSeeking && Mainform.PauseOnFrame == index)
+			{
+				color = CurrentFrame_InputLog;
+			}
+			else if (!Mainform.IsSeeking && Emulator.Frame == index)
 			{
 				color = CurrentFrame_InputLog;
 			}
@@ -380,7 +401,18 @@ namespace BizHawk.Client.EmuHawk
 
 			if (e.Button == MouseButtons.Middle)
 			{
-				TogglePause();
+				if (Mainform.EmulatorPaused)
+				{
+					TasMovieRecord record = CurrentTasMovie[LastPositionFrame];
+					if (!record.Lagged.HasValue && LastPositionFrame > Global.Emulator.Frame)
+						StartSeeking(LastPositionFrame);
+					else
+						Mainform.UnpauseEmulator();
+				}
+				else
+				{
+					Mainform.PauseEmulator();
+				}
 				return;
 			}
 
@@ -394,13 +426,14 @@ namespace BizHawk.Client.EmuHawk
 
 			if (e.Button == MouseButtons.Left)
 			{
+				bool wasHeld = _leftButtonHeld;
 				_leftButtonHeld = true;
 				// SuuperW: Exit float editing mode, or re-enter mouse editing
 				if (_floatEditRow != -1)
 				{
 					if (_floatEditColumn != buttonName || _floatEditRow != frame)
 					{
-						_floatEditRow = -1;
+						floatEditRow = -1;
 						RefreshTasView();
 					}
 					else
@@ -433,6 +466,17 @@ namespace BizHawk.Client.EmuHawk
 				}
 				else // User changed input
 				{
+					bool wasPaused = Mainform.EmulatorPaused;
+
+					if (Emulator.Frame > frame || CurrentTasMovie.LastValidFrame > frame)
+					{
+						if (wasPaused && !Mainform.IsSeeking && !CurrentTasMovie.LastPositionStable)
+						{
+							LastPositionFrame = Emulator.Frame;
+							CurrentTasMovie.LastPositionStable = true; // until new frame is emulated
+						}
+					}
+
 					if (Global.MovieSession.MovieControllerAdapter.Type.BoolButtons.Contains(buttonName))
 					{
 						CurrentTasMovie.ChangeLog.BeginNewBatch("Paint Bool " + buttonName + " from frame " + frame);
@@ -454,6 +498,9 @@ namespace BizHawk.Client.EmuHawk
 						}
 						else
 							_patternPaint = false;
+
+						if (!Settings.AutoRestoreOnMouseUpOnly)
+							DoTriggeredAutoRestoreIfNeeded();
 					}
 					else
 					{
@@ -486,12 +533,12 @@ namespace BizHawk.Client.EmuHawk
 						else // Double-click enters float editing mode
 						{
 							if (_floatEditColumn == buttonName && _floatEditRow == frame)
-								_floatEditRow = -1;
+								floatEditRow = -1;
 							else
 							{
 								CurrentTasMovie.ChangeLog.BeginNewBatch("Float Edit: " + frame);
 								_floatEditColumn = buttonName;
-								_floatEditRow = frame;
+								floatEditRow = frame;
 								_floatTypedValue = "";
 								_floatEditYPos = e.Y;
 								_triggerAutoRestore = true;
@@ -500,6 +547,10 @@ namespace BizHawk.Client.EmuHawk
 							RefreshDialog();
 						}
 					}
+
+					// taseditor behavior
+					if (!wasPaused)
+						Mainform.UnpauseEmulator();
 				}
 			}
 			else if (e.Button == System.Windows.Forms.MouseButtons.Right)
@@ -559,7 +610,7 @@ namespace BizHawk.Client.EmuHawk
 			// Exit float editing if value was changed with cursor
 			if (_floatEditRow != -1 && _floatPaintState != CurrentTasMovie.GetFloatState(_floatEditRow, _floatEditColumn))
 			{
-				_floatEditRow = -1;
+				floatEditRow = -1;
 				RefreshDialog();
 			}
 			_floatPaintState = 0;
@@ -616,20 +667,22 @@ namespace BizHawk.Client.EmuHawk
 			{
 				_supressContextMenu = true;
 				int notch = e.Delta / 120;
+				if (notch > 1)
+					notch *= 2;
 
-				if (GlobalWin.MainForm.IsSeeking)
+				// warning: tastudio rewind hotkey/button logic is copypasted from here!
+				if (Mainform.IsSeeking && !Mainform.EmulatorPaused)
 				{
-					if (e.Delta < 0)
-						GlobalWin.MainForm.PauseOnFrame++;
-					else
+					Mainform.PauseOnFrame -= notch;
+					// that's a weird condition here, but for whatever reason it works best
+					if (notch > 0 && Global.Emulator.Frame >= Mainform.PauseOnFrame)
 					{
-						GlobalWin.MainForm.PauseOnFrame--;
-						if (Global.Emulator.Frame == GlobalWin.MainForm.PauseOnFrame)
-						{
-							GlobalWin.MainForm.PauseEmulator();
-							GlobalWin.MainForm.PauseOnFrame = null;
-						}
+						Mainform.PauseEmulator();
+						Mainform.PauseOnFrame = null;
+						StopSeeking();
+						GoToFrame(Emulator.Frame - notch);
 					}
+					RefreshDialog();
 				}
 				else
 				{
@@ -704,6 +757,7 @@ namespace BizHawk.Client.EmuHawk
 					{
 						TasView.SelectRow(i, _selectionDragState);
 					}
+					SetSplicer();
 				}
 			}
 
@@ -808,6 +862,12 @@ namespace BizHawk.Client.EmuHawk
 						CurrentTasMovie.SetBoolState(i, _startBoolDrawColumn, setVal); // Notice it uses new row, old column, you can only paint across a single column
 						JumpToGreenzone();
 					}
+
+					if (!Settings.AutoRestoreOnMouseUpOnly)
+					{
+						_triggerAutoRestore = true;
+						DoTriggeredAutoRestoreIfNeeded();
+					}
 				}
 			}
 
@@ -829,6 +889,12 @@ namespace BizHawk.Client.EmuHawk
 						}
 						CurrentTasMovie.SetFloatState(i, _startFloatDrawColumn, setVal); // Notice it uses new row, old column, you can only paint across a single column
 						JumpToGreenzone();
+					}
+
+					if (!Settings.AutoRestoreOnMouseUpOnly)
+					{
+						_triggerAutoRestore = true;
+						DoTriggeredAutoRestoreIfNeeded();
 					}
 				}
 			}
@@ -886,6 +952,18 @@ namespace BizHawk.Client.EmuHawk
 			{
 				GoToNextMarker();
 			}
+			else if (e.KeyCode == Keys.Escape)
+			{
+				if (_floatEditRow != -1)
+				{
+					_floatEditRow = -1;
+				}
+				else
+				{
+					// not using StopSeeking() here, since it has special logic and should only happen when seek frame is reached
+					CancelSeekContextMenuItem_Click(null, null);
+				}
+			}
 
 			// SuuperW: Float Editing
 			if (_floatEditRow != -1)
@@ -936,7 +1014,7 @@ namespace BizHawk.Client.EmuHawk
 						_floatEditYPos = -1;
 						CurrentTasMovie.SetFloatState(_floatEditRow, _floatEditColumn, _floatPaintState);
 					}
-					_floatEditRow = -1;
+					floatEditRow = -1;
 				}
 				else
 				{
@@ -982,7 +1060,6 @@ namespace BizHawk.Client.EmuHawk
 						DoTriggeredAutoRestoreIfNeeded();
 					}
 				}
-
 			}
 
 			RefreshDialog();

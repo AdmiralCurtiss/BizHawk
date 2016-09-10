@@ -34,6 +34,7 @@ using BizHawk.Emulation.Cores.Nintendo.N64;
 using BizHawk.Client.EmuHawk.WinFormExtensions;
 using BizHawk.Client.EmuHawk.ToolExtensions;
 using BizHawk.Client.EmuHawk.CoreExtensions;
+using BizHawk.Client.ApiHawk;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -222,6 +223,7 @@ namespace BizHawk.Client.EmuHawk
 			//TODO GL - a lot of disorganized wiring-up here
 			CGC.CGCBinPath = Path.Combine(PathManager.GetDllDirectory(), "cgc.exe");
 			PresentationPanel = new PresentationPanel();
+			PresentationPanel.GraphicsControl.MainWindow = true;
 			GlobalWin.DisplayManager = new DisplayManager(PresentationPanel);
 			Controls.Add(PresentationPanel);
 			Controls.SetChildIndex(PresentationPanel, 0);
@@ -457,10 +459,9 @@ namespace BizHawk.Client.EmuHawk
 
 			SynchChrome();
 
-			//TODO POOP
 			PresentationPanel.Control.Paint += (o, e) =>
 			{
-				GlobalWin.DisplayManager.NeedsToPaint = true;
+				//I would like to trigger a repaint here, but this isnt done yet
 			};
 		}
 
@@ -519,18 +520,10 @@ namespace BizHawk.Client.EmuHawk
 					GlobalWin.Tools.LuaConsole.ResumeScripts(false);
 				}
 
-				if (Global.Config.DisplayInput) // Input display wants to update even while paused
-				{
-					GlobalWin.DisplayManager.NeedsToPaint = true;
-				}
-
 				StepRunLoop_Core();
 				StepRunLoop_Throttle();
 
-				if (GlobalWin.DisplayManager.NeedsToPaint)
-				{
-					Render();
-				}
+				Render();
 
 				CheckMessages();
 
@@ -574,7 +567,7 @@ namespace BizHawk.Client.EmuHawk
 			base.Dispose(disposing);
 		}
 
-		#endregion`
+		#endregion
 
 		#region Pause
 
@@ -617,7 +610,8 @@ namespace BizHawk.Client.EmuHawk
 		public LoadRomArgs CurrentlyOpenRomArgs;
 		public bool PauseAVI = false;
 		public bool PressFrameAdvance = false;
-		public bool PressRewind = false;
+		public bool HoldFrameAdvance = false; // necessary for tastudio > button
+		public bool PressRewind = false; // necessary for tastudio < button
 		public bool FastForward = false;
 		public bool TurboFastForward = false;
 		public bool RestoreReadWriteOnStop = false;
@@ -1069,13 +1063,16 @@ namespace BizHawk.Client.EmuHawk
 				//(this could be determined with more work; other side affects of the fullscreen mode include: corrupted taskbar, no modal boxes on top of GL control, no screenshots)
 				//At any rate, we can solve this by adding a 1px black border around the GL control
 				//Please note: It is important to do this before resizing things, otherwise momentarily a GL control without WS_BORDER will be at the magic dimensions and cause the flakeout
-				if (Global.Config.DispFullscreenHacks)
+				if (Global.Config.DispFullscreenHacks && Global.Config.DispMethod == Config.EDispMethod.OpenGL)
 				{
 					//ATTENTION: this causes the statusbar to not work well, since the backcolor is now set to black instead of SystemColors.Control.
 					//It seems that some statusbar elements composite with the backcolor. 
 					//Maybe we could add another control under the statusbar. with a different backcolor
 					Padding = new Padding(1);
 					BackColor = Color.Black;
+
+					//FUTURE WORK:
+					//re-add this padding back into the display manager (so the image will get cut off a little but, but a few more resolutions will fully fit into the screen)
 				}
 #endif
 
@@ -1768,11 +1765,11 @@ namespace BizHawk.Client.EmuHawk
 			};
 
 			//if(ioa is this or that) - for more complex behaviour
-			rom = ioa.SimplePath;
+			string romPath = ioa.SimplePath;
 
-			if (!LoadRom(rom, args))
+			if (!LoadRom(romPath, args))
 			{
-				Global.Config.RecentRoms.HandleLoadError(rom);
+				Global.Config.RecentRoms.HandleLoadError(romPath, rom);
 			}
 		}
 
@@ -1831,6 +1828,7 @@ namespace BizHawk.Client.EmuHawk
 			_throttle.SetCoreFps(Global.Emulator.CoreComm.VsyncRate);
 			_throttle.signal_paused = EmulatorPaused;
 			_throttle.signal_unthrottle = _unthrottled || turbo;
+			//zero 26-mar-2016 - vsync and vsync throttle here both is odd, but see comments elsewhere about triple buffering
 			_throttle.signal_overrideSecondaryThrottle = (fastForward || rewind) && (Global.Config.SoundThrottle || Global.Config.VSyncThrottle || Global.Config.VSync);
 			_throttle.SetSpeedPercent(speedPercent);
 		}
@@ -2170,7 +2168,7 @@ namespace BizHawk.Client.EmuHawk
 				Global.Config.SoundVolume = 100;
 			}
 
-			GlobalWin.Sound.ApplyVolumeSettings();
+			//GlobalWin.Sound.ApplyVolumeSettings();
 			GlobalWin.OSD.AddMessage("Volume " + Global.Config.SoundVolume);
 		}
 
@@ -2182,7 +2180,7 @@ namespace BizHawk.Client.EmuHawk
 				Global.Config.SoundVolume = 0;
 			}
 
-			GlobalWin.Sound.ApplyVolumeSettings();
+			//GlobalWin.Sound.ApplyVolumeSettings();
 			GlobalWin.OSD.AddMessage("Volume " + Global.Config.SoundVolume);
 		}
 
@@ -2560,7 +2558,7 @@ namespace BizHawk.Client.EmuHawk
 		private static void VsyncMessage()
 		{
 			GlobalWin.OSD.AddMessage(
-				"Display Vsync set to " + (Global.Config.VSyncThrottle ? "on" : "off")
+				"Display Vsync set to " + (Global.Config.VSync ? "on" : "off")
 			);
 		}
 
@@ -2675,7 +2673,7 @@ namespace BizHawk.Client.EmuHawk
 				runFrame = true;
 			}
 
-			if (Global.ClientControls["Frame Advance"] || PressFrameAdvance)
+			if (Global.ClientControls["Frame Advance"] || PressFrameAdvance || HoldFrameAdvance)
 			{
 				// handle the initial trigger of a frame advance
 				if (_frameAdvanceTimestamp == 0)
@@ -2720,7 +2718,10 @@ namespace BizHawk.Client.EmuHawk
 				runFrame = true;
 			}
 
-			var genSound = false;
+			float atten = Global.Config.SoundVolume / 100.0f;
+			if (!Global.Config.SoundEnabledNormal)
+				atten = 0;
+
 			var coreskipaudio = false;
 			if (runFrame || force)
 			{
@@ -2795,11 +2796,18 @@ namespace BizHawk.Client.EmuHawk
 
 				if (!_runloopFrameadvance)
 				{
-					genSound = true;
+					
 				}
 				else if (!Global.Config.MuteFrameAdvance)
 				{
-					genSound = true;
+					atten = 0;
+				}
+
+				if (isFastForwarding || IsTurboing || isRewinding)
+				{
+					atten *= Global.Config.SoundVolumeRWFF / 100.0f;
+					if (!Global.Config.SoundEnabledRWFF)
+						atten = 0;
 				}
 
 				Global.MovieSession.HandleMovieOnFrameLoop();
@@ -2820,7 +2828,6 @@ namespace BizHawk.Client.EmuHawk
 
 				Global.MovieSession.HandleMovieAfterFrameLoop();
 
-				GlobalWin.DisplayManager.NeedsToPaint = true;
 				Global.CheatList.Pulse();
 
 				if (!PauseAVI)
@@ -2850,6 +2857,16 @@ namespace BizHawk.Client.EmuHawk
 					UpdateToolsAfter();
 				}
 
+				if (GlobalWin.Tools.IsLoaded<TAStudio>() &&
+					GlobalWin.Tools.TAStudio.LastPositionFrame == Global.Emulator.Frame)
+				{
+					TasMovieRecord record = (Global.MovieSession.Movie as TasMovie)[Global.Emulator.Frame];
+					if (!record.Lagged.HasValue && IsSeeking)
+						// haven't yet greenzoned the frame, hence it's after editing
+						// then we want to pause here. taseditor fasion
+						PauseEmulator();
+				}
+
 				if (IsSeeking && Global.Emulator.Frame == PauseOnFrame.Value)
 				{
 					PauseEmulator();
@@ -2860,11 +2877,15 @@ namespace BizHawk.Client.EmuHawk
 					}
 				}
 			}
+			else
+			{
+				atten = 0;
+			}
 
 			if (Global.ClientControls["Rewind"] || PressRewind)
 			{
 				UpdateToolsAfter();
-				PressRewind = false;
+				//PressRewind = false;
 			}
 
 			if (UpdateFrame)
@@ -2872,8 +2893,7 @@ namespace BizHawk.Client.EmuHawk
 				UpdateFrame = false;
 			}
 
-			bool outputSilence = !genSound || coreskipaudio;
-			GlobalWin.Sound.UpdateSound(outputSilence);
+			GlobalWin.Sound.UpdateSound(atten);
 		}
 
 		#endregion
@@ -3102,7 +3122,6 @@ namespace BizHawk.Client.EmuHawk
 
 		private void AvFrameAdvance()
 		{
-			GlobalWin.DisplayManager.NeedsToPaint = true;
 			if (_currAviWriter != null)
 			{
 				//TODO ZERO - this code is pretty jacked. we'll want to frugalize buffers better for speedier dumping, and we might want to rely on the GL layer for padding
@@ -3211,8 +3230,6 @@ namespace BizHawk.Client.EmuHawk
 						}
 					}
 				}
-
-				GlobalWin.DisplayManager.NeedsToPaint = true;
 			}
 		}
 
@@ -3486,6 +3503,7 @@ namespace BizHawk.Client.EmuHawk
 							Console.WriteLine("  {0} : {1}", f.FirmwareId, f.Hash);
 						}
 					}
+					ApiHawk.ClientApi.OnRomLoaded();
 					return true;
 				}
 				else
@@ -3496,6 +3514,7 @@ namespace BizHawk.Client.EmuHawk
 					//The ROM has been loaded by a recursive invocation of the LoadROM method.
 					if (!(Global.Emulator is NullEmulator))
 					{
+						ApiHawk.ClientApi.OnRomLoaded();
 						return true;
 					}
 
@@ -3566,6 +3585,9 @@ namespace BizHawk.Client.EmuHawk
 			{
 				StopMovie(true);
 			}
+
+			if (GlobalWin.Tools.IsLoaded<TraceLogger>())
+				GlobalWin.Tools.Get<TraceLogger>().Restart();
 
 			Global.CheatList.SaveOnClose();
 			Global.Emulator.Dispose();
@@ -3685,10 +3707,10 @@ namespace BizHawk.Client.EmuHawk
 			if (fromLua)
 				Global.MovieSession.Movie.IsCountingRerecords = false;
 
-			GlobalWin.DisplayManager.NeedsToPaint = true;
-
 			if (SavestateManager.LoadStateFile(path, userFriendlyStateName))
 			{
+				ClientApi.OnStateLoaded(this, userFriendlyStateName);
+
 				if (GlobalWin.Tools.Has<LuaConsole>())
 				{
 					GlobalWin.Tools.LuaConsole.LuaImp.CallLoadStateEvent(userFriendlyStateName);
@@ -3717,6 +3739,13 @@ namespace BizHawk.Client.EmuHawk
 		public void LoadQuickSave(string quickSlotName, bool fromLua = false, bool supressOSD = false)
 		{
 			if (!Global.Emulator.HasSavestates())
+			{
+				return;
+			}
+
+			bool handled;
+			ClientApi.OnBeforeQuickLoad(this, quickSlotName, out handled);
+			if (handled)
 			{
 				return;
 			}
@@ -3755,6 +3784,8 @@ namespace BizHawk.Client.EmuHawk
 			{
 				SavestateManager.SaveStateFile(path, userFriendlyStateName);
 
+				ClientApi.OnStateSaved(this, userFriendlyStateName);
+
 				GlobalWin.OSD.AddMessage("Saved state: " + userFriendlyStateName);
 			}
 			catch (IOException)
@@ -3771,6 +3802,13 @@ namespace BizHawk.Client.EmuHawk
 		public void SaveQuickSave(string quickSlotName)
 		{
 			if (!Global.Emulator.HasSavestates())
+			{
+				return;
+			}
+
+			bool handled;
+			ClientApi.OnBeforeQuickSave(this, quickSlotName, out handled);
+			if(handled)
 			{
 				return;
 			}
@@ -3998,16 +4036,37 @@ namespace BizHawk.Client.EmuHawk
 
 		private bool Rewind(ref bool runFrame, long currentTimestamp)
 		{
+			var isRewinding = false;
+
 			if (IsSlave && master.WantsToControlRewind)
 			{
 				if (Global.ClientControls["Rewind"] || PressRewind)
 				{
-					runFrame = true; // TODO: the master should be deciding this!
-					return master.Rewind();
+					if (_frameRewindTimestamp == 0)
+					{
+						isRewinding = true;
+						_frameRewindTimestamp = currentTimestamp;
+					}
+					else
+					{
+						double timestampDeltaMs = (double)(currentTimestamp - _frameRewindTimestamp) / Stopwatch.Frequency * 1000.0;
+						isRewinding = timestampDeltaMs >= Global.Config.FrameProgressDelayMs;
+					}
+
+					if (isRewinding)
+					{
+						runFrame = true; // TODO: the master should be deciding this!
+						master.Rewind();
+					}
 				}
+				else
+				{
+					_frameRewindTimestamp = 0;
+				}
+
+				return isRewinding;
 			}
 
-			var isRewinding = false;
 			if (Global.Rewinder.RewindActive && (Global.ClientControls["Rewind"] || PressRewind)
 				&& !Global.MovieSession.Movie.IsRecording) // Rewind isn't "bulletproof" and can desync a recording movie!
 			{

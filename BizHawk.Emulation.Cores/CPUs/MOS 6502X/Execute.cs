@@ -197,7 +197,7 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 			/*TYA [implied]*/ new Uop[] { Uop.Imp_TYA, Uop.End },
 			/*STA addr,Y [absolute indexed WRITE]*/ new Uop[] { Uop.Fetch2, Uop.AbsIdx_Stage3_Y, Uop.AbsIdx_Stage4, Uop.AbsIdx_WRITE_Stage5_STA, Uop.End },
 			/*TXS [implied]*/ new Uop[] { Uop.Imp_TXS, Uop.End },
-			/*SHS* addr,X [absolute indexed WRITE X] [unofficial] [NOT IMPLEMENTED - TRICKY, AND NO TEST]*/ new Uop[] { Uop.Fetch2, Uop.AbsIdx_Stage3_X, Uop.AbsIdx_Stage4, Uop.AbsIdx_WRITE_Stage5_ERROR, Uop.End },
+			/*SHS* addr,Y [absolute indexed WRITE Y] [unofficial] */ new Uop[] { Uop.Fetch2, Uop.AbsIdx_Stage3_Y, Uop.AbsIdx_Stage4, Uop.AbsIdx_WRITE_Stage5_ERROR, Uop.End },
 			/*SHY** [absolute indexed WRITE] [unofficial]*/ new Uop[] { Uop.Fetch2, Uop.AbsIdx_Stage3_X, Uop.AbsIdx_Stage4, Uop.AbsIdx_WRITE_Stage5_SHY, Uop.End },
 			/*STA addr,X [absolute indexed WRITE]*/ new Uop[] { Uop.Fetch2, Uop.AbsIdx_Stage3_X, Uop.AbsIdx_Stage4, Uop.AbsIdx_WRITE_Stage5_STA, Uop.End },
 			/*SHX* addr,Y [absolute indexed WRITE Y] [unofficial]*/ new Uop[] { Uop.Fetch2, Uop.AbsIdx_Stage3_Y, Uop.AbsIdx_Stage4, Uop.AbsIdx_WRITE_Stage5_SHX, Uop.End },
@@ -231,7 +231,7 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 			/*CLV [implied]*/ new Uop[] { Uop.Imp_CLV, Uop.End },
 			/*LDA addr,Y* [absolute indexed READ Y]*/ new Uop[] { Uop.Fetch2, Uop.AbsIdx_Stage3_Y, Uop.AbsIdx_READ_Stage4, Uop.AbsIdx_READ_Stage5_LDA, Uop.End },
 			/*TSX [implied]*/ new Uop[] { Uop.Imp_TSX, Uop.End },
-			/*LAS* addr,X [absolute indexed READ X] [unofficial]*/ new Uop[] { Uop.Fetch2, Uop.AbsIdx_Stage3_X, Uop.AbsIdx_READ_Stage4, Uop.AbsIdx_READ_Stage5_ERROR, Uop.End },
+			/*LAS* addr,Y [absolute indexed READ Y] [unofficial]*/ new Uop[] { Uop.Fetch2, Uop.AbsIdx_Stage3_Y, Uop.AbsIdx_READ_Stage4, Uop.AbsIdx_READ_Stage5_ERROR, Uop.End },
 			/*LDY addr,X* [absolute indexed READ X]*/ new Uop[] { Uop.Fetch2, Uop.AbsIdx_Stage3_X, Uop.AbsIdx_READ_Stage4, Uop.AbsIdx_READ_Stage5_LDY, Uop.End },
 			/*LDA addr,X* [absolute indexed READ X]*/ new Uop[] { Uop.Fetch2, Uop.AbsIdx_Stage3_X, Uop.AbsIdx_READ_Stage4, Uop.AbsIdx_READ_Stage5_LDA, Uop.End },
 			/*LDX addr,Y* [absolute indexed READ Y]*/ new Uop[] { Uop.Fetch2, Uop.AbsIdx_Stage3_Y, Uop.AbsIdx_READ_Stage4, Uop.AbsIdx_READ_Stage5_LDX, Uop.End },
@@ -534,7 +534,11 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 
 		void FetchDummy()
 		{
-			DummyReadMemory(PC);
+			rdy_freeze = !RDY;
+			if (RDY)
+			{
+				DummyReadMemory(PC);
+			}
 		}
 
 		public void Execute(int cycles)
@@ -940,9 +944,10 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 			rdy_freeze = !RDY;
 			if (RDY)
 			{
-				if (alu_temp.Bit(8))
+                ReadMemory((ushort)ea);
+                if (alu_temp.Bit(8))
 					ea = (ushort)(ea + 0x100);
-				ReadMemory((ushort)ea);
+				
 			}
 
 		}
@@ -1090,9 +1095,7 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 		void IndIdx_RMW_Stage8()
 		{
 			WriteMemory((ushort)ea, (byte)alu_temp);
-
-
-		}
+        }
 		void RelBranch_Stage2_BVS()
 		{
 			branch_taken = FlagV == true;
@@ -1152,45 +1155,59 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 		}
 		void RelBranch_Stage3()
 		{
-			FetchDummy();
-			alu_temp = (byte)PC + (int)(sbyte)opcode2;
-			PC &= 0xFF00;
-			PC |= (ushort)((alu_temp & 0xFF));
-			if (alu_temp.Bit(8))
-			{
-				//we need to carry the add, and then we'll be ready to fetch the next instruction
-				opcode = VOP_RelativeStuff2;
-				mi = -1;
-			}
-			else
-			{
-				//to pass cpu_interrupts_v2/5-branch_delays_irq we need to handle a quirk here
-				//if we decide to interrupt in the next cycle, this condition will cause it to get deferred by one instruction
-				if (!interrupt_pending)
-					branch_irq_hack = true;
-			}
-
-		}
+            rdy_freeze = !RDY;
+		    if (RDY)
+		    {
+                FetchDummy();
+                alu_temp = (byte)PC + (int)(sbyte)opcode2;
+                PC &= 0xFF00;
+                PC |= (ushort)((alu_temp & 0xFF));
+                if (alu_temp.Bit(8))
+                {
+                    //we need to carry the add, and then we'll be ready to fetch the next instruction
+                    opcode = VOP_RelativeStuff2;
+                    mi = -1;
+                }
+                else
+                {
+                    //to pass cpu_interrupts_v2/5-branch_delays_irq we need to handle a quirk here
+                    //if we decide to interrupt in the next cycle, this condition will cause it to get deferred by one instruction
+                    if (!interrupt_pending)
+                        branch_irq_hack = true;
+                }
+            }
+        }
 		void RelBranch_Stage4()
 		{
-			FetchDummy();
-			if (alu_temp.Bit(31))
-				PC = (ushort)(PC - 0x100);
-			else PC = (ushort)(PC + 0x100);
-
-
-		}
+            rdy_freeze = !RDY;
+		    if (RDY)
+		    {
+                FetchDummy();
+                if (alu_temp.Bit(31))
+                    PC = (ushort)(PC - 0x100);
+                else PC = (ushort)(PC + 0x100);
+            }
+        }
 		void NOP()
 		{
-		}
-		void DecS()
+            rdy_freeze = !RDY;
+        }
+        void DecS()
 		{
-			S--;
-		}
+            rdy_freeze = !RDY;
+            if (RDY)
+            {
+                S--;
+            }
+        }
 		void IncS()
 		{
-			S++;
-		}
+            rdy_freeze = !RDY;
+            if (RDY)
+            {
+                S++;
+            }
+        }
 		void JSR()
 		{
 			rdy_freeze = !RDY;
@@ -2041,35 +2058,50 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 		}
 		void Imp_ASL_A()
 		{
-			FetchDummy();
-			FlagC = (A & 0x80) != 0;
-			A = (byte)(A << 1);
-			NZ_A();
-		}
+            rdy_freeze = !RDY;
+		    if (RDY)
+		    {
+                FetchDummy();
+                FlagC = (A & 0x80) != 0;
+                A = (byte)(A << 1);
+                NZ_A();
+            }
+        }
 		void Imp_ROL_A()
 		{
-			FetchDummy();
-			temp8 = A;
-			A = (byte)((A << 1) | (P & 1));
-			FlagC = (temp8 & 0x80) != 0;
-			NZ_A();
-		}
+            rdy_freeze = !RDY;
+		    if (RDY)
+		    {
+                FetchDummy();
+                temp8 = A;
+                A = (byte)((A << 1) | (P & 1));
+                FlagC = (temp8 & 0x80) != 0;
+                NZ_A();
+            }
+        }
 		void Imp_ROR_A()
 		{
-			FetchDummy();
-			temp8 = A;
-			A = (byte)((A >> 1) | ((P & 1) << 7));
-			FlagC = (temp8 & 1) != 0;
-			NZ_A();
-		}
+            rdy_freeze = !RDY;
+		    if (RDY)
+		    {
+                FetchDummy();
+                temp8 = A;
+                A = (byte)((A >> 1) | ((P & 1) << 7));
+                FlagC = (temp8 & 1) != 0;
+                NZ_A();
+            }
+        }
 		void Imp_LSR_A()
 		{
-			FetchDummy();
-			FlagC = (A & 1) != 0;
-			A = (byte)(A >> 1);
-			NZ_A();
-
-		}
+            rdy_freeze = !RDY;
+            if (RDY)
+		    {
+                FetchDummy();
+                FlagC = (A & 1) != 0;
+                A = (byte)(A >> 1);
+                NZ_A();
+            }
+        }
 		void JMP_abs()
 		{
 			rdy_freeze = !RDY;
@@ -2081,10 +2113,13 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 		}
 		void IncPC()
 		{
-			PC++;
-
-
-		}
+			rdy_freeze = !RDY;
+			if (RDY)
+			{
+				ReadMemory(PC);
+				PC++;
+			}
+		}	
 		void ZP_RMW_Stage3()
 		{
 			rdy_freeze = !RDY;
@@ -2097,21 +2132,18 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 		void ZP_RMW_Stage5()
 		{
 			WriteMemory(opcode2, (byte)alu_temp);
-
 		}
 		void ZP_RMW_INC()
 		{
 			WriteMemory(opcode2, (byte)alu_temp);
 			alu_temp = (byte)((alu_temp + 1) & 0xFF);
 			P = (byte)((P & 0x7D) | TableNZ[alu_temp]);
-
 		}
 		void ZP_RMW_DEC()
 		{
 			WriteMemory(opcode2, (byte)alu_temp);
 			alu_temp = (byte)((alu_temp - 1) & 0xFF);
 			P = (byte)((P & 0x7D) | TableNZ[alu_temp]);
-
 		}
 		void ZP_RMW_ASL()
 		{
@@ -2120,7 +2152,6 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 			FlagC = (value8 & 0x80) != 0;
 			alu_temp = value8 = (byte)(value8 << 1);
 			P = (byte)((P & 0x7D) | TableNZ[value8]);
-
 		}
 		void ZP_RMW_SRE()
 		{
@@ -2163,7 +2194,6 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 			alu_temp = value8 = (byte)((value8 >> 1) | ((P & 1) << 7));
 			FlagC = (temp8 & 1) != 0;
 			P = (byte)((P & 0x7D) | TableNZ[value8]);
-
 		}
 		void ZP_RMW_ROL()
 		{
@@ -2172,7 +2202,6 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 			alu_temp = value8 = (byte)((value8 << 1) | (P & 1));
 			FlagC = (temp8 & 0x80) != 0;
 			P = (byte)((P & 0x7D) | TableNZ[value8]);
-
 		}
 		void ZP_RMW_SLO()
 		{
@@ -2198,7 +2227,6 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 			FlagC = (temp8 & 0x80) != 0;
 			A &= value8;
 			NZ_A();
-
 		}
 		void AbsIdx_Stage3_Y()
 		{
@@ -2247,8 +2275,9 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 			rdy_freeze = !RDY;
 			if (RDY)
 			{
-				//bleh.. redundant code to make sure we dont clobber alu_temp before using it to decide whether to change ea
-				if (alu_temp.Bit(8))
+                //bleh.. redundant code to make sure we dont clobber alu_temp before using it to decide whether to change ea
+
+                if (alu_temp.Bit(8))
 				{
 					alu_temp = ReadMemory((ushort)ea);
 					ea = (ushort)(ea + 0x100);
@@ -2278,14 +2307,10 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 		}
 		void AbsIdx_WRITE_Stage5_ERROR()
 		{
-			rdy_freeze = !RDY;
-			if (RDY)
-			{
-				alu_temp = ReadMemory((ushort)ea);
-				//throw new InvalidOperationException("UNSUPPORTED OPCODE [probably SHS] PLEASE REPORT");
-			}
+            S = (byte)(X & A);
+            WriteMemory((ushort)ea, (byte)(S & (opcode3+1)));
 
-		}
+        }
 		void AbsIdx_RMW_Stage5()
 		{
 			rdy_freeze = !RDY;
@@ -2504,8 +2529,11 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 			if (RDY)
 			{
 				alu_temp = ReadMemory((ushort)ea);
-				//throw new InvalidOperationException("UNSUPPORTED OPCODE [probably LAS] PLEASE REPORT");
-			}
+                S &= (byte)alu_temp;
+                X = S;
+                A = S;
+                P = (byte)((P & 0x7D) | TableNZ[S]);
+            }
 
 		}
 		void AbsInd_JMP_Stage4()
@@ -2939,9 +2967,11 @@ namespace BizHawk.Emulation.Cores.Components.M6502
 
 		public void ExecuteOne()
 		{
-			if (!rdy_freeze)
+            // total cycles now incraments every time a cycle is called to accurately count during RDY
+            TotalExecutedCycles++;
+            if (!rdy_freeze)
 			{
-				TotalExecutedCycles++;
+				
 
 				interrupt_pending |= Interrupted;
 			}
