@@ -755,15 +755,19 @@ namespace BizHawk.Client.Common
 								}
 								else
 								{
-									// NES handles database entries strangely so work around that so we can still force core...
-									core = CoreInventory.Instance["NES", "QuickNes"];
+									if ( Global.Config.CoreForcingViaGameDB && game.ForcedCore != null && game.ForcedCore.ToLowerInvariant() == "neshawk" ) {
+										core = CoreInventory.Instance["NES", "NesHawk"];
+									} else {
+										// NES handles database entries strangely so work around that so we can still force core...
+										core = CoreInventory.Instance["NES", "QuickNes"];
 
-									nextEmulator = core.Create(nextComm, game, rom.RomData, rom.FileData, Deterministic, GetCoreSettings(core.Type), GetCoreSyncSettings(core.Type));
-									if ( Global.Config.CoreForcingViaGameDB && nextEmulator is QuickNES ) {
-										string forceCore = ( nextEmulator as QuickNES ).BootGodForceCore;
-										if ( forceCore != null && forceCore.ToLowerInvariant() == "neshawk" ) {
-											core = CoreInventory.Instance["NES", "NesHawk"];
-											nextEmulator = null;
+										nextEmulator = core.Create(nextComm, game, rom.RomData, rom.FileData, Deterministic, GetCoreSettings(core.Type), GetCoreSyncSettings(core.Type));
+										if ( Global.Config.CoreForcingViaGameDB && nextEmulator is QuickNES ) {
+											string forceCore = ( nextEmulator as QuickNES ).BootGodForceCore;
+											if ( forceCore != null && forceCore.ToLowerInvariant() == "neshawk" ) {
+												core = CoreInventory.Instance["NES", "NesHawk"];
+												nextEmulator = null;
+											}
 										}
 									}
 								}
