@@ -29,6 +29,9 @@
 #include gamedb_msx1.txt
 #include gamedb_msx2.txt
 
+; ArcadePit hacks
+sha1:90acbbdfad1465032dfff77175320bab8aa4adb7	G	Mike Tyson's Punch-Out!! [Buck Edit] (USA)	NES				NesHawk
+
 ; ************ NES / Famicom ************
 
 ;games which might be good according to goodNES, but which are almost positively not according to bootgod, who has dumps with different hashes
