@@ -42,13 +42,13 @@ namespace BizHawk.Emulation.Cores.Consoles.Sega.gpgx
 		public void LoadStateBinary(BinaryReader reader)
 		{
 			int newlen = reader.ReadInt32();
-			if (newlen != _savebuff.Length)
+			if (newlen > _savebuff.Length)
 			{
 				throw new Exception("Unexpected state size");
 			}
 
-			reader.Read(_savebuff, 0, _savebuff.Length);
-			if (!LibGPGX.gpgx_state_load(_savebuff, _savebuff.Length))
+			reader.Read(_savebuff, 0, newlen);
+			if (!LibGPGX.gpgx_state_load(_savebuff, newlen))
 			{
 				throw new Exception("gpgx_state_load() returned false");
 			}

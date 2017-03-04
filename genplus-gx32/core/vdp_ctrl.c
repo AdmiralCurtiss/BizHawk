@@ -497,66 +497,13 @@ int vdp_context_save(uint8 *state)
 int vdp_context_load(uint8 *state, uint8 version)
 {
   int i, bufferptr = 0;
-  uint8 special;
-	uint8 temp_reg[0x20];
+  uint8 temp_reg[0x20];
 
-  /* VDP context */
   load_param(sat, sizeof(sat));
   load_param(vram, sizeof(vram));
   load_param(cram, sizeof(cram));
   load_param(vsram, sizeof(vsram));
   load_param(temp_reg, sizeof(temp_reg));
-  load_param(&hint_pending, sizeof(hint_pending));
-  load_param(&vint_pending, sizeof(vint_pending));
-  load_param(&status, sizeof(status));
-  load_param(&dma_length, sizeof(dma_length));
-
-  /* Global variables */
-  load_param(&ntab, sizeof(ntab));
-  load_param(&ntbb, sizeof(ntbb));
-  load_param(&ntwb, sizeof(ntwb));
-  load_param(&satb, sizeof(satb));
-  load_param(&hscb, sizeof(hscb));
-  /*load_param(bg_name_dirty, sizeof(bg_name_dirty)); not needed */
-  /*load_param(bg_name_list, sizeof(bg_name_list)); not needed */
-  /*load_param(&bg_list_index, sizeof(bg_list_index)); not needed */
-  load_param(&hscroll_mask, sizeof(hscroll_mask));
-  load_param(&playfield_shift, sizeof(playfield_shift));
-  load_param(&playfield_col_mask, sizeof(playfield_col_mask));
-  load_param(&playfield_row_mask, sizeof(playfield_row_mask));
-  load_param(&vscroll, sizeof(vscroll));
-  load_param(&odd_frame, sizeof(odd_frame));
-  load_param(&im2_flag, sizeof(im2_flag));
-  load_param(&interlaced, sizeof(interlaced));
-  /*load_param(&vdp_pal, sizeof(vdp_pal)); I believe this is just set during initialization */
-  load_param(&v_counter, sizeof(v_counter));
-  load_param(&vc_max, sizeof(vc_max));
-  /*load_param(&lines_per_frame, sizeof(lines_per_frame)); I believe this is just set during initialization */
-  load_param(&max_sprite_pixels, sizeof(max_sprite_pixels));
-  load_param(&fifo_write_cnt, sizeof(fifo_write_cnt));
-  load_param(&fifo_slots, sizeof(fifo_slots));
-  load_param(&hvc_latch, sizeof(hvc_latch));
-  /*special*/
-  load_param(&special, sizeof(special));
-  if(special==32) hctab = cycle2hc32; else hctab = cycle2hc40;
-
-  /* other things */
-  load_param(&pending, sizeof(pending));
-  load_param(&code, sizeof(code));
-  load_param(&dma_type, sizeof(dma_type));
-  load_param(&addr, sizeof(addr));
-  load_param(&addr_latch, sizeof(addr_latch));
-  load_param(&status, sizeof(status));
-  load_param(&sat_base_mask, sizeof(sat_base_mask));
-  load_param(&sat_addr_mask, sizeof(sat_addr_mask));
-  load_param(&dma_src, sizeof(dma_src));
-  load_param(&dma_endCycles, sizeof(dma_endCycles));
-  load_param(&dmafill, sizeof(dmafill));
-  load_param(&cached_write, sizeof(cached_write));
-  load_param(fifo, sizeof(fifo));
-  load_param(&fifo_idx, sizeof(fifo_idx));
-  load_param(&fifo_cycles, sizeof(fifo_cycles));
-
 
   /* restore VDP registers */
   if (system_hw < SYSTEM_MD)
@@ -588,6 +535,52 @@ int vdp_context_load(uint8 *state, uint8 version)
     }
   }
 
+  load_param(&addr, sizeof(addr));
+  load_param(&addr_latch, sizeof(addr_latch));
+  load_param(&code, sizeof(code));
+  load_param(&pending, sizeof(pending));
+  load_param(&status, sizeof(status));
+
+  /* 1.7.1 state compatibility */
+  if (version < 0x35)
+  {
+    uint16 temp;
+    load_param(&temp, 2);
+    dmafill = temp >> 8;
+    temp &= 0xff;
+    fifo_idx = 0;
+    fifo[0] = fifo[1] = fifo[2] = fifo[3] = (temp << 8) | temp;
+  }
+  else
+  {
+    int dmafill_tmp, fifo_idx_tmp;
+    load_param(&dmafill_tmp, sizeof(dmafill_tmp));
+    dmafill = (uint8)(dmafill_tmp);
+    load_param(&fifo_idx_tmp, sizeof(fifo_idx_tmp));
+    fifo_idx = (int32)(fifo_idx_tmp);
+    load_param(&fifo, sizeof(fifo));
+  }
+
+  load_param(&hint_pending, sizeof(hint_pending));
+  load_param(&vint_pending, sizeof(vint_pending));
+  load_param(&dma_length, sizeof(dma_length));
+  load_param(&dma_type, sizeof(dma_type));
+  load_param(&dma_src, sizeof(dma_src));
+
+  {
+    int cached_write_tmp;
+    load_param(&cached_write_tmp, sizeof(cached_write_tmp));
+    cached_write = (int32)(cached_write_tmp);
+  }
+
+  /* restore FIFO byte access flag */
+  fifo_byte_access = ((code & 0x0F) < 0x03);
+
+  /* restore current NTSC/PAL mode */
+  if (system_hw & SYSTEM_MD)
+  {
+    status = (status & ~1) | vdp_pal;
+  }
 
   if (reg[1] & 0x04)
   {
