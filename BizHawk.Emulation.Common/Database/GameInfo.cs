@@ -22,6 +22,17 @@ namespace BizHawk.Emulation.Common
 		public string FirmwareHash { get; set; }
 		public string ForcedCore { get; private set; }
 
+		public string CleanName {
+			get {
+				int idx = Name.IndexOfAny( new char[] { '(', '{', '[' } );
+				if (idx > -1) {
+					return Name.Substring( 0, idx ).Trim();
+				} else {
+					return Name.Trim();
+				}
+			}
+		}
+
 		private Dictionary<string, string> Options { get; set; } = new Dictionary<string, string>();
 
 		public GameInfo()

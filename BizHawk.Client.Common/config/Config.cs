@@ -545,6 +545,7 @@ namespace BizHawk.Client.Common
 		public bool A78_UseEmu7800 = false;
 		public bool SGB_UseBsnes = false;
 		public bool CoreForcingViaGameDB = true;
+		public bool WriteGameNameToFile = false;
 		public string LibretroCore;
 	}
 

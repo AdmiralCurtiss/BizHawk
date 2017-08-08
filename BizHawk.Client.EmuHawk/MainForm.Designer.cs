@@ -443,6 +443,8 @@
             this.ShowMenuContextMenuSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.ShowMenuContextMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.timerMouseIdle = new System.Windows.Forms.Timer(this.components);
+            this.toolStripSeparator38 = new System.Windows.Forms.ToolStripSeparator();
+            this.WriteGameNameToFileMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.MainformMenu.SuspendLayout();
             this.MainStatusBar.SuspendLayout();
             this.MainFormContextMenu.SuspendLayout();
@@ -1448,6 +1450,8 @@
             this.SpeedSkipSubMenu,
             this.KeyPrioritySubMenu,
             this.CoresSubMenu,
+            this.toolStripSeparator38,
+            this.WriteGameNameToFileMenuItem,
             this.toolStripSeparator10,
             this.SaveConfigMenuItem,
             this.SaveConfigAsMenuItem,
@@ -3927,6 +3931,18 @@
             this.timerMouseIdle.Interval = 2000;
             this.timerMouseIdle.Tick += new System.EventHandler(this.TimerMouseIdle_Tick);
             // 
+            // toolStripSeparator38
+            // 
+            this.toolStripSeparator38.Name = "toolStripSeparator38";
+            this.toolStripSeparator38.Size = new System.Drawing.Size(198, 6);
+            // 
+            // toolStripMenuItem18
+            // 
+            this.WriteGameNameToFileMenuItem.Name = "WriteGameNameToFileMenuItem";
+            this.WriteGameNameToFileMenuItem.Size = new System.Drawing.Size(201, 22);
+            this.WriteGameNameToFileMenuItem.Text = "Write game name to file";
+            this.WriteGameNameToFileMenuItem.Click += new System.EventHandler(this.WriteGameNameToFileMenuItem_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
@@ -4381,5 +4397,7 @@
 		private System.Windows.Forms.ToolStripMenuItem SgbSameBoyMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem pCFXToolStripMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem preferencesToolStripMenuItem3;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator38;
+		private System.Windows.Forms.ToolStripMenuItem WriteGameNameToFileMenuItem;
 	}
 }

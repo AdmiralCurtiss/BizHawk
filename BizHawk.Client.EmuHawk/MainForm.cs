@@ -3570,6 +3570,11 @@ namespace BizHawk.Client.EmuHawk
 					CoreFileProvider.SyncCoreCommInputSignals(nextComm);
 					InputManager.SyncControls();
 
+					if (Global.Config.WriteGameNameToFile)
+					{
+						System.IO.File.WriteAllText("gamename.txt", Global.Game.CleanName);
+					}
+
 					if (Emulator is TI83 && Global.Config.TI83autoloadKeyPad)
 					{
 						GlobalWin.Tools.Load<TI83KeyPad>();
@@ -4239,6 +4244,11 @@ namespace BizHawk.Client.EmuHawk
 		private void preferencesToolStripMenuItem3_Click(object sender, EventArgs e)
 		{
 			GenericCoreConfig.DoDialog(this, "PC-FX Settings");
+		}
+
+		private void WriteGameNameToFileMenuItem_Click(object sender, EventArgs e)
+		{
+			Global.Config.WriteGameNameToFile ^= true;
 		}
 
 		private bool Rewind(ref bool runFrame, long currentTimestamp, out bool returnToRecording)
