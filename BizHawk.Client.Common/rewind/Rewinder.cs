@@ -62,9 +62,11 @@ namespace BizHawk.Client.Common
 				}
 			}
 
+			/*
 			DoMessage(RewindEnabled ?
 				$"Rewind enabled, frequency: {RewindFrequency}" :
 				"Rewind disabled");
+			*/
 
 			_rewindDeltaEnable = Global.Config.Rewind_UseDelta;
 
