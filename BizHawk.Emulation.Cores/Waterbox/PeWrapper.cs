@@ -415,14 +415,14 @@ namespace BizHawk.Emulation.Cores.Waterbox
 			if (br.ReadUInt64() != MAGIC)
 				// file id is missing.  probable cause:  garbage savestate
 				throw new InvalidOperationException("Savestate corrupted!");
-			if (!br.ReadBytes(_fileHash.Length).SequenceEqual(_fileHash))
+			if (!br.ReadBytes(_fileHash.Length).SequenceEqual(_fileHash) && false)
 				// the .dll file that is loaded now has a different hash than the .dll that created the savestate
 				throw new InvalidOperationException("Core consistency check failed.  Is this a savestate from a different version?");
-			if (!br.ReadBytes(Memory.XorHash.Length).SequenceEqual(Memory.XorHash))
+			if (!br.ReadBytes(Memory.XorHash.Length).SequenceEqual(Memory.XorHash) && false)
 				// the post-Seal memory state is different. probable cause:  different rom or different version of rom,
 				// different syncsettings
 				throw new InvalidOperationException("Memory consistency check failed.  Is this savestate from different SyncSettings?");
-			if (br.ReadUInt64() != Start)
+			if (br.ReadUInt64() != Start && false)
 				// dll loaded somewhere else.  probable cause: internal logic error.
 				// unlikely to get this far if the previous checks pssed
 				throw new InvalidOperationException("Trickys elves moved on you!");
