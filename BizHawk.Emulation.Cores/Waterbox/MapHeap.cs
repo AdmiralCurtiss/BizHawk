@@ -300,7 +300,7 @@ namespace BizHawk.Emulation.Cores.Waterbox
 				throw new InvalidOperationException(string.Format("Size did not match for mapheap {0}", Name));
 			var used = br.ReadUInt64();
 			var hash = br.ReadBytes(Memory.XorHash.Length);
-			if (!hash.SequenceEqual(Memory.XorHash))
+			if (false && !hash.SequenceEqual(Memory.XorHash))
 				throw new InvalidOperationException(string.Format("Hash did not match for mapheap {0}.  Is this the same rom?", Name));
 
 			if (br.BaseStream.Read(_pagesAsBytes, 0, _pagesAsBytes.Length) != _pagesAsBytes.Length)
